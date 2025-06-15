@@ -13,6 +13,7 @@ class Cumulative():
         # frames
         for i, frame in enumerate(frames):
             t = methodClass.apply(frame)
+            # print(i, t)
             if i >= self.min_frames and t >= self.th: # 1 is for no holo
                 return False, i
         return True, i

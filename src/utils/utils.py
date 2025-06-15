@@ -54,11 +54,13 @@ def get_metrics(dataset, model, decision):
     for i in tqdm(range(len(dataset))):
         model.reset()
         frames = dataset[i]
-        d, j = decision.process_frame_by_frame(frames, model)
+        is_fraud, j = decision.process_frame_by_frame(frames, model)
+        # print(i, is_fraud, j)
         if dataset.isFraud(i):
-            acc_frauds.append(d)
+            acc_frauds.append(is_fraud)
         else:
-            acc_origins.append(d)
+            acc_origins.append(is_fraud)
+        # print(len(acc_origins), len(acc_frauds))
     
     metrics = get_metrics_from_values(acc_origins, acc_frauds)
     

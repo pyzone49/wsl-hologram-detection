@@ -10,6 +10,24 @@ from os.path import join as pjoin
 import os
 import random
 
+class BackboneSaveCallback(pl.Callback):
+    """Custom callback to save backbone at each epoch"""
+    def __init__(self, save_dir: str, filename_prefix: str = "backbone"):
+        super().__init__()
+        self.save_dir = save_dir
+        self.filename_prefix = filename_prefix
+        os.makedirs(save_dir, exist_ok=True)
+    
+    def on_train_epoch_end(self, trainer, pl_module):
+        """Save backbone at the end of each training epoch"""
+        epoch = trainer.current_epoch
+        backbone_filename = f"{self.filename_prefix}_epoch_{epoch:02d}.pth"
+        backbone_path = os.path.join(self.save_dir, backbone_filename)
+        
+        # Save the backbone state dict
+        torch.save(pl_module.backbone.state_dict(), backbone_path)
+        print(f"Saved backbone to: {backbone_path}")
+
 class MIDVHoloDataset:
     IMAGES_TRANSFORM = [Image.FLIP_LEFT_RIGHT, Image.FLIP_TOP_BOTTOM, Image.ROTATE_90, Image.ROTATE_180, Image.ROTATE_270]
     def __init__(self, input_dir, transform, split_dir="", split_file="train.txt", only_label=None, flip_rot=True) -> None:
@@ -156,7 +174,7 @@ class ModelTriplet(pl.LightningModule):
         return ({"optimizer": optim})
 
 class Trainer:
-    def __init__(self, epochs_max, model, seed=0, lr=0.1, accelerator="cuda", checkpoint_callback=None, run_name="") -> None:
+    def __init__(self, epochs_max, model, seed=0, lr=0.1, accelerator="cuda", checkpoint_callback=None, backbone_save_callback=None, run_name="") -> None:
         torch.set_float32_matmul_precision('high')
         pl.seed_everything(seed, workers=True)
         self.seed = seed
@@ -164,6 +182,7 @@ class Trainer:
         self.epochs = epochs_max
         self.accelerator = accelerator
         self.checkpoint_callback = checkpoint_callback
+        self.backbone_save_callback = backbone_save_callback
         self.run_name = run_name
         self.decision = None
         self.val_fullvid = None
@@ -172,16 +191,34 @@ class Trainer:
     def train(self, datamodule, task_name):
         model = ModelTriplet(self.model, self.lr)
         tags = {"task_name": task_name}
-        checkpoint = ModelCheckpoint(save_top_k=1, monitor="val_loss", filename='{epoch}-{val_loss:.2f}')
+        
+        # Use provided checkpoint callback or create default one
+        callbacks = []
+        if self.checkpoint_callback is not None:
+            callbacks.append(self.checkpoint_callback)
+            checkpoint = self.checkpoint_callback
+        else:
+            checkpoint = ModelCheckpoint(save_top_k=-1, monitor="val_loss", filename='{epoch}-{val_loss:.2f}')
+            callbacks.append(checkpoint)
+        
+        # Add backbone save callback
+        if self.backbone_save_callback is not None:
+            callbacks.append(self.backbone_save_callback)
+        else:
+            # Create default backbone callback if none provided
+            backbone_save_dir = os.path.join(checkpoint.dirpath if hasattr(checkpoint, 'dirpath') and checkpoint.dirpath else "checkpoints", "backbones")
+            backbone_callback = BackboneSaveCallback(save_dir=backbone_save_dir)
+            callbacks.append(backbone_callback)
+            
         mllogger = MLFlowLogger(log_model=True, run_name=f"{task_name}_{self.run_name}", tags=tags)
         run_id = mllogger.run_id
         mllogger.experiment.log_param(run_id, "lr", model.lr)
         mllogger.experiment.log_param(run_id, "transform", datamodule.transform)
         mllogger.experiment.log_param(run_id, "batch_size", datamodule.batch_size)
         loggers = [mllogger]
-        # callbacks=([self.checkpoint_callback] if self.checkpoint_callback is not None else None)
+        
         pl.seed_everything(self.seed, workers=True)
-        trainer = pl.Trainer(max_epochs=self.epochs, accelerator=self.accelerator, logger=loggers, callbacks=[checkpoint], deterministic=True)
+        trainer = pl.Trainer(max_epochs=self.epochs, accelerator=self.accelerator, logger=loggers, callbacks=callbacks, deterministic=True)
         trainer.fit(model, datamodule)
 
         # saving best model for latter use

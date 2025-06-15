@@ -139,24 +139,32 @@ class Trainer:
         self.general_model = general_model
 
     def train(self, datamodule, task_name):
-        
         model = BinaryClassifier(self.model, self.lr)
         tags = {"task_name": task_name}
-        checkpoint = ModelCheckpoint(save_top_k=1, monitor="val_loss", filename='{epoch}-{val_loss:.2f}')
+        
+        # Use provided checkpoint callback or create default one
+        callbacks = []
+        if self.checkpoint_callback is not None:
+            callbacks.append(self.checkpoint_callback)
+            checkpoint = self.checkpoint_callback
+        else:
+            # Save a checkpoint at every epoch
+            checkpoint = ModelCheckpoint(save_top_k=-1, monitor="val_loss", filename='{epoch}-{val_loss:.2f}')
+            callbacks.append(checkpoint)
+            
         mllogger = MLFlowLogger(log_model=True, run_name=f"{task_name}_{self.run_name}", tags=tags)
         run_id = mllogger.run_id
         mllogger.experiment.log_param(run_id, "lr", model.lr)
         mllogger.experiment.log_param(run_id, "transform", datamodule.transform)
         mllogger.experiment.log_param(run_id, "batch_size", datamodule.batch_size)
         loggers = [mllogger]
-        # callbacks=([self.checkpoint_callback] if self.checkpoint_callback is not None else None)
+        
         pl.seed_everything(self.seed, workers=True)
-        trainer = pl.Trainer(max_epochs=self.epochs, accelerator=self.accelerator, logger=loggers, callbacks=[checkpoint], deterministic=True)
+        trainer = pl.Trainer(max_epochs=self.epochs, accelerator=self.accelerator, logger=loggers, callbacks=callbacks, deterministic=True)
         trainer.fit(model, datamodule)
 
-        # saving best model backbone for latter use
+        # saving best model for latter use
         best_model_path = trainer.checkpoint_callback.best_model_path
-        print(best_model_path)
         model.load_state_dict(torch.load(best_model_path)["state_dict"])
         torch.save(model.backbone.state_dict(), os.path.join(os.path.dirname(best_model_path), f"backbone_{os.path.basename(best_model_path)}"))
         mllogger.experiment.log_metric(run_id, "best_val_loss", checkpoint.best_model_score)
