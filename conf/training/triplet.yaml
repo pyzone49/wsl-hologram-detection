@@ -1,16 +1,27 @@
 trainer:
   _target_: src.traindl.trainer_general.Trainer
-  epochs_max: 2
+  epochs_max: 100
   accelerator: cuda
-  lr: 0.001
+  lr: 0.00001
   run_name: "randomcrop_blur_colorjitter_adamw"
   model: ${model.model}
+  checkpoint_callback:
+    _target_: lightning.pytorch.callbacks.ModelCheckpoint
+    save_top_k: -1
+    save_last: true
+    save_on_train_epoch_end: true
+    every_n_epochs: 1
+    filename: '{epoch:02d}'
+  backbone_save_callback:
+    _target_: src.traindl.trainer_general.BackboneSaveCallback
+    save_dir: "checkpoints/backbones"
+    filename_prefix: "backbone"
 
 datamodule: 
   _target_: src.traindl.trainer_general.MIDVHoloDataModule
   input_dir: ${data.train.input_dir}
   split_dir: ${paths.midvholo_split_dir}
-  num_workers: 4
+  num_workers: 8
   batch_size: 16
   transform:
     _target_: torchvision.transforms.Compose

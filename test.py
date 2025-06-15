@@ -27,7 +27,7 @@ def main(cfg : DictConfig) -> None:
     params = DictConfig(params)
 
     decision = instantiate(params.decision)
-
+    total_metrics = []
     mlflow.set_experiment("test_"+cfg.paths.split_name)
     if not already_run(cfg, "test_"+cfg.paths.split_name):
         with mlflow.start_run():
@@ -40,9 +40,13 @@ def main(cfg : DictConfig) -> None:
                 decision = instantiate(params.decision)
                 data_test = instantiate(cfg.data.test[test_d])
                 metrics = get_metrics(data_test, model, decision)
+                total_metrics.append(metrics)
                 mlflow.log_metrics({f"{test_d}_{k}":metrics[k] for k in metrics})
+            total_metrics_str = {f"{test_d}_{k}":metrics[k] for k in metrics}
+            mlflow.log_text(f"{task_name_full} {test_d} {total_metrics_str}", "metrics.txt")
     else:
         log.info("this run was already lauched")
+    print(total_metrics)
 
 if __name__ == "__main__":
     main()

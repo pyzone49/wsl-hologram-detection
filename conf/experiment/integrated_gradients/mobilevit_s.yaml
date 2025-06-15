@@ -1,0 +1,10 @@
+# @package _global_
+
+model:
+  model: 
+    backbone_name: mobilevit_xxs
+
+# Override specific settings for this experiment
+checkpoint_path: "checkpoints/wsl_mobilevit_xxs_k0/best_model.pth"  # Update with actual path
+image_path: "data/sample_image.jpg"  # Update with actual path
+save_path: "outputs/mobilevit_s_attribution.png" 

@@ -2,4 +2,4 @@ defaults:
   - train/midv-holo-train
   - test/midv-holo-test
   - test/midv-holo-pr-notseen
-  - test/midv-2020
+  # - test/midv-2020

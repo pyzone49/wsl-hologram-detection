@@ -1,4 +1,3 @@
-
 root_dir: . 
 # path to data dir
 data_dir: ${paths.root_dir}/data/
@@ -11,6 +10,9 @@ output_dir: ${hydra:runtime.output_dir}
 
 # path to work directory
 work_dir: ${hydra:runtime.cwd}
+
+# path to checkpoint directory
+checkpoint_dir: ${paths.root_dir}/checkpoints/
 
 # split for midv holo
 split_dir: data/splits_kfold_s0
