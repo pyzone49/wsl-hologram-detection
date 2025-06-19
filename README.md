@@ -55,16 +55,6 @@ Test ImageNet pretrained models without additional training:
 
 ```bash
 python test_imagenet_baseline.py
-```
-
-### Explainability Analysis
-
-Generate Integrated Gradients visualizations:
-
-```bash
-python integrated_gradients.py image_dir=/path/to/frames
-```
-
 
 ### train_mobilevit.sh
 
@@ -257,16 +247,16 @@ This section presents key experimental results demonstrating the effectiveness o
 
 ### Performance Metrics
 
-![Result 1](src/results/Capture%20d'écran%20du%202025-06-19%2013-48-08.png)
-![Result 2](src/results/Capture%20d'écran%20du%202025-06-19%2013-48-24.png)
-![Result 3](src/results/Capture%20d'écran%20du%202025-06-19%2013-48-32.png)
+![Result 1](./src/results/imagenet.png)
+![Result 2](./src/results/epoch2.png)
+![Result 3](./src/results/epoch3.png)
 
 ### Model Comparison
-![Result 3](src/results/Capture%20d'écran%20du%202025-06-16%2015-12-06.png)
+![Result 3](src/results/fscore.png)
 
 
 ### Training Progress
-![Result 4](src/results/Capture%20d'écran%20du%202025-06-16%2011-37-43.png)
+![Result 4](src/results/val_loss.png)
 
 The results demonstrate the framework's ability to effectively detect document fraud across different model architectures and decision strategies. Key findings include improved performance through SSL pretraining and the effectiveness of different decision approaches for various fraud types.
 
