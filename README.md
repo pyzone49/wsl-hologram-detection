@@ -1,146 +1,277 @@
-# pouliquen.24.icdar
-Experimental protocol and results for the paper "[Weakly Supervised Training for Hologram Verification in Identity Documents](https://arxiv.org/abs/2404.17253)" accepted at ICDAR 2024 as a [poster presentation](data/poster/poster.pdf) by Pouliquen et al.
+# Document Fraud Detection
 
-![Weakly Supervised Training pipeline](data/figures/weakly_supervised_method_pipeline.svg)
+A comprehensive framework for document fraud detection using self-supervised learning models and explainable AI techniques. This project implements various approaches including baseline ImageNet models, SSL pretrained models, and integrated gradients for model interpretation.
 
-## How to launch all the xp
-After creating a Python3 environement (was tested with python 3.9) you can install all requirements with
+## Overview
+
+This repository contains the implementation for document fraud detection research, featuring:
+
+- **Self-Supervised Learning (SSL) models** for document authenticity verification
+- **Multiple decision strategies** including frame-by-frame and cumulative analysis
+- **Explainable AI integration** using Integrated Gradients for model interpretability
+- **Comprehensive evaluation framework** with MLflow experiment tracking
+- **Calibration utilities** for threshold optimization
+
+
+### Core Functionality
+- **SSL Model Training**: Train self-supervised learning models on document datasets
+- **Fraud Detection**: Binary classification for document authenticity
+- **Decision Strategies**: Multiple approaches for video/sequence-based decisions
+- **Threshold Calibration**: Automatic threshold optimization for optimal performance
+
+### Explainability
+- **Integrated Gradients**: Generate attribution maps for model predictions
+- **Visualization Tools**: Plot and analyze model attention patterns
+- **Frame-by-frame Analysis**: Understand decision processes at each step
+
+### Evaluation
+- **Comprehensive Testing**: Test models across multiple datasets
+- **Baseline Comparisons**: Compare against ImageNet pretrained models
+- **MLflow Integration**: Track experiments and metrics automatically
+- **Multiple Checkpoints**: Evaluate different model versions
+
+## Installation
+
+1. **Set up the environment**:
+   ```bash
+   # Create virtual environment (recommended)
+   python -m venv venv
+   source venv/bin/activate  # On Windows: venv\Scripts\activate
+   
+   # Install dependencies
+   pip install torch torchvision lightning
+   pip install hydra-core omegaconf
+   pip install mlflow
+   pip install captum  # For Integrated Gradients
+   pip install matplotlib pillow
+   ```
+
+## Usage
+
+
+### Baseline Evaluation
+
+Test ImageNet pretrained models without additional training:
+
 ```bash
-pip install -r requirements.txt
-```
-The results were obtained using python3.9 and the requirements `jobs/requirements-exact.txt` using one NVIDIA RTX A5000.
-## Generate the datasets
-First download [MIDV Holo](https://github.com/SmartEngines/midv-holo) and `clips` from [MIDV 2020](http://l3i-share.univ-lr.fr/MIDV2020/midv2020.html) datasets.
-
-then copy `markup`, `images` from [MIDV Holo](https://github.com/SmartEngines/midv-holo) to `data/midv-holo` 
-and `dataset/clips` from [MIDV 2020](http://l3i-share.univ-lr.fr/MIDV2020/midv2020.html) to `data/midv-2020/clips`  
-You should have:
-```
-data/
-├── midv-2020
-│   └── clips
-│       ├── annotations
-│       ├── images
-├── midv-holo
-│   ├── images
-│   │   ├── fraud
-│   │   └── origins
-│   └── markup
-│       ├── fraud
-│       └── origins
+python test_imagenet_baseline.py
 ```
 
-Finally you can use the scripts `jobs/dataset/generate_data_midvholo.sh` and `jobs/dataset/generate_data_midvholo.sh` that will extract the datasets.  
-They will create two new directories for each of the datasets: `rectified` and `crop_ovds`. 
+### Explainability Analysis
+
+Generate Integrated Gradients visualizations:
 
 ```bash
-# activate the python environement
-bash jobs/dataset/generate_data_midvholo.sh
-bash jobs/dataset/generate_data_midv2020.sh
+python integrated_gradients.py image_dir=/path/to/frames
 ```
 
-## launch experiments
-Launch the scripts from the `jobs` directory to reproduce all the experiments:
 
-- `baseline`: MIDV Holo approach (re-implemention of the original MIDV Holo paper, see: https://github.com/SmartEngines/midv-holo)
-    - `calibrate_baseline_fulldoc_nosplit.sh`: full document, decision "cumulative", unsplit MIDV-Holo dataset (original configuration proposed in the MIDV Holo paper)  
-    Along with some variations, more in line with our proposed approach:
-    - `calibrate_baseline_fulldoc_cumulative.sh`: full document, decision "cumulative"
-    - `calibrate_baseline_cumulative.sh`: specific ROI, decision "cumulative"
-    - `calibrate_baseline.sh`: specific ROI, decision "whole video"
-               
-- `wsl`: Our proposed Weakly Supervised Method:
-    - `train_mobilevit.sh`: specific ROI, both decision mode, using a mobilevit.
-    - `train_resnet.sh`: specific ROI, decision "whole video", using a resnet.
-    - `train_mobilenet.sh` : specific ROI, decision "whole video", using a mobilenet
-    - `train_mobilenet_small_50_noaugment.sh` : specific ROI, no augmentation, decision "whole video", using a mobilenet 
-    - `train_mobilenet_small_50_onlyorigins.sh` : specific ROI, trained only on origins, decision "whole video", using a mobilenet 
-    - `train_mobilevit.sh` : specific ROI, both decision mode, using a mobilevit.
-    - `train_mobilevit_xxs_noaugment.sh` : specific ROI, no augmentation, decision "whole video", using a mobilevit
-    - `train_mobilevit_xxs_onlyorigins.sh` : specific ROI, trained only on origins, decision "whole video", using a mobilevit
-    - `train_resnet18.sh` : specific ROI, decision "whole video", using a resnet
-    - `train_resnet18_noaugment.sh` : specific ROI, no augmentation, decision "whole video", using a resnet18
-    - `train_resnet18_onlyorigins.sh` : specific ROI, trained only on origins, decision "whole video", using a resnet18 
-    - `imagenet.sh`: specific ROI, decision "whole video", based on each of the 3 model archi (untrained, ImageNet initial weights).
+### train_mobilevit.sh
 
-- `classifier`: Binary classifer (to test naive baseline):
-    - `mobilenet.sh`: specific ROI, decision "whole video"
-    - `mobilevit.sh`: specific ROI, decision "whole video"
-    - `resnet18.sh`: specific ROI, decision "whole video"
-
-Those jobs were launched using:
-- one GPU (NVIDIA RTX A5000) and 5 cpus per job for `wsl` and `classifer`  
-- 30 cpus for the `baseline` jobs
-
-### Results
-Retrieve the results and format them :
-`notebooks/export_test_results.ipynb`  
-A csv file is provided to verify the results presented in the paper and some results were copied in markdown for an easier verification without having to run the notebook.
+This script provides a complete training and evaluation pipeline for MobileViT models:
 
 
-
-## Proposed Weakly supervised method
-### Training deep learning models
-Possible configurations :
-- wsl : Weakly Supervised Learning
-- classifier: Naive binary classifier
-
-Possible architectures (pretrained on imagenet) :
-- resnet
-- mobilenetv3
-- mobilevit
-- any model from timm
 ```bash
-python train.py --config-name=wsl +experiment=wsl/resnet18
+# Usage
+./jobs/wsl/train_mobilevit.sh
 ```
 
-### Decision threshold calibration  
-Will find the best params if `tuner: True` (by default)
-else runs with the params that were passed
-for our deeplearning models (wsl and classification) it uses only the val set
+**What it does:**
+- Executes a full end-to-end pipeline: training → calibration → testing
+- Trains a MobileViT-S model using SSL approach on k0 data split
+- Performs calibration and testing with two decision strategies (allvideo and cumulative)
+- Tests across all data splits (k0, k1, k2, k3, k4) for comprehensive evaluation
+
+**Pipeline steps:**
+1. **Training**: Trains MobileViT-S model on k0 split
+2. **AllVideo Strategy**: Calibrates thresholds and tests using allvideo decision method
+3. **Cumulative Strategy**: Calibrates thresholds and tests using cumulative decision method
+
+**Key parameters:**
+- `--config-name=wsl`: Uses WSL-specific configuration
+- `+experiment=wsl/mobilevit_s`: Loads MobileViT-S experiment settings
+- `paths.split_name=k0`: Training on k0 split, testing on all splits (k0-k4)
+- `decision=allvideo/cumulative`: Two different decision strategies for comparison
+
+
+### test_multiple.sh
+
+This script automates the calibration + evaluation of multiple model checkpoints from a training run:
+
 ```bash
-python calibration.py --config-name=wsl +experiment=wsl/resnet18
+# Usage
+./jobs/test_multiple.sh
 ```
 
+**What it does:**
+- Runs `test_multiple_checkpoints.py` with predefined configurations
+- Uses WSL experiment configuration with MobileViT-S model
+- Tests on k0 data split with cumulative decision strategy
+- Evaluates all checkpoints from a specific MLflow run directory
 
-### Testing
-Retrieves the best run from the `task_name` on the train or validation dataset: one with the best fscore
-use this model and params to run on test set
+**Key parameters:**
+- `--config-name=wsl`: Uses WSL-specific configuration
+- `+experiment=wsl/mobilevit_s`: Loads MobileViT-S experiment settings
+- `paths.split_name=k0`: Tests on k0 data split
+- `decision=cumulative`: Uses cumulative decision strategy
+- `+checkpoint_dir=...`: Path to directory containing multiple checkpoints
+
+### integrated_gradients.sh
+
+This script runs explainability analysis using Integrated Gradients on document images:
+
 ```bash
-python test.py --config-name=wsl +experiment=wsl/resnet18
+# Usage
+./jobs/integrated_gradients.sh
 ```
-This example will only run on the split `k0` (default) but all experiments in `jobs` are runned on 5 splits (`k0` to `k4` in `data/splits_kfold_s0`) except the reproduction of the MIDV Holo baseline that is runned on the whole dataset.
-## MIDV holo baseline
 
-Midv Holo baseline reproduction
+**What it does:**
+- Runs `integrated_gradients.py` with predefined configurations
+- Analyzes images from a specific directory using a trained model
+- Generates attribution maps showing which pixels influence the fraud detection decision
+- Uses a specific checkpoint for model weights
 
-### Calibration
+**Key parameters:**
+- `--config-name=wsl`: Uses WSL-specific configuration
+- `+experiment=wsl/mobilevit_s`: Loads MobileViT-S experiment settings
+- `paths.split_name=k0`: Uses k0 data split configuration
+- `decision=cumulative`: Uses cumulative decision strategy
+- `+image_dir=...`: Directory containing images to analyze
+- `+checkpoint_path=...`: Specific model checkpoint to load
 
-You can specify the parameters that you want to test:
+
+### Data Preprocessing Scripts
+
+The project includes specialized scripts for document preprocessing:
+
+#### Homography and ROI Cropping - `data/generate_midv-holo.py`
+
+This script performs geometric correction and region of interest extraction:
+
+**Functionality:**
+- **Homography correction**: Applies perspective transformation to rectify documents using template quad coordinates from markup files
+- **ROI cropping**: Extracts specific regions of interest from rectified documents
+- **Batch processing**: Processes both original and fraud documents in parallel
+
+**Key features:**
+- Uses perspective transformation (`cv2.getPerspectiveTransform`) to correct document orientation
+- Extracts ROI coordinates `[[141, 224], [498, 557]]` for consistent document regions
+- Generates two outputs:
+  - `/rectified/`: Full perspective-corrected documents (1123×709 pixels)
+  - `/crop_ovds/`: ROI-cropped versions for focused analysis
+- Processes both origins and fraud datasets with parallel execution
+
+**Usage:**
 ```bash
-python calibration.py --config-name=midv_baseline --multirun '+experiment=midv_baseline_fulldoc' 'decision.th=0.01' 'model.s_t=30,40,50' 'model.T=range(0,250,10)' "decision=cumulative"
+cd data/
+python generate_midv-holo.py
 ```
-A run with the exact same parameters will not be rerun
 
-Later to test the best parameters
+#### Light Normalization - `seuillage_tous_fichiers.py`
+
+This script removes intense lighting artifacts from document images:
+
+**Functionality:**
+- **Overexposure detection**: Identifies regions with pixel values ≥ 240 (intense light)
+- **Temporal correction**: Uses neighboring frames to reconstruct overexposed areas
+- **Morphological processing**: Applies dilation and erosion to refine detection masks
+
+**Key features:**
+- Detects overexposed regions using grayscale thresholding
+- Corrects artifacts by averaging neighboring frame pixels in overexposed areas
+- Applies morphological operations (kernel size 5×5) to improve mask quality
+- Preserves original image quality in non-overexposed regions
+- Batch processes entire folder hierarchies
+
+**Usage:**
 ```bash
-python test.py --config-name=midv_baseline --multirun '+experiment=midv_baseline_fulldoc' "decision=cumulative"
+python seuillage_tous_fichiers.py
 ```
 
-### Results
-Results on the train/test splits can be retrieved using `notebooks/export_test_results.ipynb`
+**Configuration:**
+```python
+# Input and output directories
+root_input_folder = "/path/to/input/images/"
+root_output_folder = "/path/to/output/corrected/"
 
-### Results of the reproduction of MIDV Holo (no split)
+# Processing parameters
+kernel_size = 5  # Morphological operations kernel
+threshold = 240  # Overexposure detection threshold
+```
+
+### Dataset Structure
+
+After preprocessing, the expected structure is:
+
+```
+data/midv-holo/
+├── images/           # Original images
+├── rectified/        # Homography-corrected documents
+├── crop_ovds/        # ROI-cropped regions
+├── output_seuillages/# Light-normalized images
+└── markup/           # Template quad annotations
+```
+
+## Model Architectures
+
+- **SSL Models**: Self-supervised learning approaches
+- **ImageNet Baselines**: Pretrained model comparisons
+
+
+## Experiment Tracking
+
+The project integrates with MLflow for comprehensive experiment tracking:
+
+- **Automatic logging**: Metrics, parameters, and artifacts
+- **Model comparison**: Compare different architectures and hyperparameters
+- **Visualization**: Built-in plots and metric visualization
+- **Reproducibility**: Complete experiment state tracking
+
+Access MLflow UI:
 ```bash
-python calibration.py --config-name=midv_baseline -m +experiment=midv_baseline/midv_baseline_nosplit "model.T=range(0,250,10)" "model.s_t=30,40,50" "decision.th=0.01,0.02,0.03"
+mlflow ui
 ```
-Retrieval of the results of the reproduction of MIDV Holo baseline:
-`notebooks/AUC_baseline.ipynb`
 
-## Visualization
-In `notebooks/visualisation` two notebooks are present allowing to:
-- visualize integrated gradient of the trained models : `notebooks/visualisation/model-interpretation.ipynb`
-- visualize the transforms that were used for the wsl model (and binary classifiers) : `notebooks/visualisation/visu_transforms.ipynb`
+## Explainability Features
 
-## Framework
-The framework was built using [Hydra](https://github.com/facebookresearch/hydra) ([documentation](https://hydra.cc/docs/)) and [MLflow](https://github.com/mlflow/mlflow) for logging experiments.
+### Integrated Gradients
+
+Generate attribution maps to understand model decisions:
+
+```bash
+python integrated_gradients.py \
+    image_dir=/path/to/images \
+    checkpoint_path=/path/to/checkpoint.ckpt \
+    target_class=0
+```
+
+Features:
+- **Attribution maps**: Pixel-level importance visualization
+- **Convergence analysis**: Quality metrics for attributions
+- **Batch processing**: Handle multiple images
+- **Configurable targets**: Analyze different output classes
+
+## Results
+
+This section presents key experimental results demonstrating the effectiveness of the document fraud detection framework.
+
+### Performance Metrics
+
+![Result 1](src/results/Capture%20d'écran%20du%202025-06-19%2013-48-08.png)
+![Result 2](src/results/Capture%20d'écran%20du%202025-06-19%2013-48-24.png)
+![Result 3](src/results/Capture%20d'écran%20du%202025-06-19%2013-48-32.png)
+
+### Model Comparison
+![Result 3](src/results/Capture%20d'écran%20du%202025-06-16%2015-12-06.png)
+
+
+### Training Progress
+![Result 4](src/results/Capture%20d'écran%20du%202025-06-16%2011-37-43.png)
+
+The results demonstrate the framework's ability to effectively detect document fraud across different model architectures and decision strategies. Key findings include improved performance through SSL pretraining and the effectiveness of different decision approaches for various fraud types.
+
+## Contact
+
+yacine.flici@etu.u-paris.fr
+---
+
